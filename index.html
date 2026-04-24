@@ -6,26 +6,47 @@
     <title>简易 AI 对话</title>
     <style>
         * { box-sizing: border-box; }
+        :root { color-scheme: dark; }
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f2f4f7;
-            color: #222;
+            min-height: 100vh;
+            font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            background:
+                radial-gradient(circle at 16% 20%, rgba(120, 119, 255, 0.36), transparent 28%),
+                radial-gradient(circle at 82% 18%, rgba(0, 214, 255, 0.28), transparent 24%),
+                radial-gradient(circle at 54% 90%, rgba(255, 0, 153, 0.22), transparent 28%),
+                linear-gradient(135deg, #050816 0%, #090b1a 46%, #121d3f 100%);
+            color: #e9f2ff;
         }
         .app {
-            max-width: 900px;
+            position: relative;
+            max-width: 980px;
             margin: 20px auto;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            background: rgba(9, 15, 36, 0.74);
+            border: 1px solid rgba(174, 196, 255, 0.16);
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(14px);
             overflow: hidden;
             display: flex;
             flex-direction: column;
             height: calc(100vh - 40px);
         }
+        .app::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 15%, rgba(255, 255, 255, 0.08) 50%, transparent 85%);
+            transform: translateX(-130%);
+            animation: shimmer 8s ease-in-out infinite;
+            pointer-events: none;
+        }
         .header {
+            position: relative;
+            z-index: 1;
             padding: 14px 16px;
-            border-bottom: 1px solid #e8e8e8;
+            border-bottom: 1px solid rgba(173, 192, 255, 0.18);
+            background: rgba(14, 22, 48, 0.75);
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
@@ -34,53 +55,98 @@
         .header h3 {
             margin: 0 12px 0 0;
             font-size: 16px;
+            letter-spacing: 0.02em;
+            color: #f7fbff;
+        }
+        .header input[type="password"],
+        .input-bar textarea {
+            border: 1px solid rgba(151, 176, 255, 0.28);
+            border-radius: 10px;
+            background: rgba(13, 21, 48, 0.84);
+            color: #eaf3ff;
+            outline: none;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
         }
         .header input[type="password"] {
             width: 340px;
             max-width: 100%;
             padding: 8px 10px;
         }
+        .header input[type="password"]::placeholder,
+        .input-bar textarea::placeholder {
+            color: #9ab0d6;
+        }
+        .header input[type="password"]:focus,
+        .input-bar textarea:focus {
+            border-color: rgba(109, 186, 255, 0.9);
+            box-shadow: 0 0 0 3px rgba(96, 186, 255, 0.2);
+        }
         .header label {
             font-size: 13px;
-            color: #666;
+            color: #adc2e9;
             display: flex;
             gap: 6px;
             align-items: center;
         }
-        .header button {
-            padding: 8px 10px;
+        .header button,
+        .input-bar button {
+            border: 1px solid rgba(162, 186, 255, 0.35);
+            border-radius: 10px;
+            background: rgba(31, 47, 96, 0.86);
+            color: #e9f2ff;
+            padding: 8px 12px;
             cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+        .header button:hover,
+        .input-bar button:hover {
+            transform: translateY(-1px);
+            background: rgba(48, 69, 136, 0.95);
+            box-shadow: 0 10px 24px rgba(45, 84, 178, 0.32);
         }
         .logout-btn {
             margin-left: auto;
-            background: #ffe1e1;
-            border: 1px solid #f2b1b1;
-            border-radius: 8px;
+            background: rgba(81, 36, 68, 0.9);
+            border-color: rgba(255, 146, 200, 0.5);
+            color: #ffd7ec;
+        }
+        .logout-btn:hover {
+            background: rgba(109, 46, 90, 0.95);
+            box-shadow: 0 10px 24px rgba(180, 68, 142, 0.32);
         }
         .chat {
+            position: relative;
+            z-index: 1;
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
-            background: #fafafa;
+            padding: 18px 16px;
+            background: rgba(9, 16, 40, 0.56);
         }
         .msg {
             max-width: 80%;
             margin-bottom: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
+            padding: 11px 13px;
+            border-radius: 12px;
             white-space: pre-wrap;
-            line-height: 1.5;
+            line-height: 1.55;
+            border: 1px solid rgba(169, 190, 255, 0.22);
+            box-shadow: 0 10px 28px rgba(5, 8, 22, 0.36);
         }
         .user {
             margin-left: auto;
-            background: #d8ecff;
+            background: linear-gradient(135deg, rgba(37, 80, 180, 0.88), rgba(98, 66, 196, 0.9));
+            color: #eef5ff;
         }
         .assistant {
             margin-right: auto;
-            background: #ececec;
+            background: linear-gradient(135deg, rgba(20, 42, 86, 0.88), rgba(29, 25, 75, 0.86));
+            color: #dce9ff;
         }
         .input-bar {
-            border-top: 1px solid #e8e8e8;
+            position: relative;
+            z-index: 1;
+            border-top: 1px solid rgba(173, 192, 255, 0.18);
+            background: rgba(12, 20, 46, 0.72);
             padding: 12px;
             display: flex;
             gap: 10px;
@@ -91,16 +157,28 @@
             min-height: 48px;
             max-height: 160px;
             padding: 10px;
-            line-height: 1.4;
+            line-height: 1.45;
         }
         .input-bar button {
             width: 100px;
-            cursor: pointer;
+            background: linear-gradient(135deg, #62d4ff, #7a69ff 55%, #f06bc4);
+            color: #081122;
+            font-weight: 700;
+            border: 0;
+        }
+        .input-bar button:hover {
+            box-shadow: 0 10px 24px rgba(122, 105, 255, 0.42);
         }
         .status {
+            position: relative;
+            z-index: 1;
             margin: 0 12px 12px;
-            color: #666;
+            color: #a7bedf;
             font-size: 13px;
+        }
+        @keyframes shimmer {
+            0%, 65% { transform: translateX(-130%); }
+            100% { transform: translateX(130%); }
         }
     </style>
 </head>
