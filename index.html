@@ -51,6 +51,12 @@
             padding: 8px 10px;
             cursor: pointer;
         }
+        .logout-btn {
+            margin-left: auto;
+            background: #ffe1e1;
+            border: 1px solid #f2b1b1;
+            border-radius: 8px;
+        }
         .chat {
             flex: 1;
             overflow-y: auto;
@@ -107,6 +113,7 @@
             <button id="configPromptBtn">配置提示词</button>
             <button id="viewRequestBtn">最近请求</button>
             <button id="toggleThinkingBtn">思考：开</button>
+            <button id="logoutBtn" class="logout-btn">退出登录</button>
         </div>
 
         <div id="chat" class="chat"></div>
@@ -136,6 +143,7 @@
         const configPromptBtn = document.getElementById("configPromptBtn");
         const toggleThinkingBtn = document.getElementById("toggleThinkingBtn");
         const viewRequestBtn = document.getElementById("viewRequestBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
 
         let systemPrompt = DEFAULT_SYSTEM_PROMPT;
         let userName = "";
@@ -145,7 +153,7 @@
         window.addEventListener("DOMContentLoaded", () => {
             const savedName = localStorage.getItem(USER_NAME_KEY);
             if (!savedName) {
-                window.location.href = "./login.html";
+                window.location.href = "./welcome.html";
                 return;
             }
             userName = savedName;
@@ -353,6 +361,10 @@
             localStorage.setItem("dashscope_enable_thinking", thinkingEnabled ? "1" : "0");
             renderThinkingToggle();
             setStatus("思考功能已" + (thinkingEnabled ? "开启" : "关闭") + "。");
+        });
+        logoutBtn.addEventListener("click", () => {
+            localStorage.removeItem(USER_NAME_KEY);
+            window.location.href = "./login.html";
         });
         promptEl.addEventListener("keydown", (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {

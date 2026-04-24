@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎页</title>
+    <style>
+        * { box-sizing: border-box; }
+        :root {
+            color-scheme: dark;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(120, 119, 255, 0.35), transparent 28%),
+                radial-gradient(circle at 80% 30%, rgba(0, 214, 255, 0.3), transparent 24%),
+                radial-gradient(circle at 50% 80%, rgba(255, 0, 153, 0.25), transparent 26%),
+                linear-gradient(135deg, #050816 0%, #090b1a 45%, #121d3f 100%);
+            color: #fff;
+        }
+        .aurora,
+        .aurora::before,
+        .aurora::after {
+            position: absolute;
+            inset: -20%;
+            content: "";
+            background: conic-gradient(from 90deg, rgba(103, 80, 255, 0.18), rgba(0, 224, 255, 0.12), rgba(255, 0, 170, 0.18), rgba(103, 80, 255, 0.18));
+            filter: blur(60px);
+            animation: spin 18s linear infinite;
+        }
+        .aurora::before {
+            animation-direction: reverse;
+            animation-duration: 22s;
+            opacity: 0.8;
+        }
+        .aurora::after {
+            animation-duration: 26s;
+            transform: scale(1.15);
+            opacity: 0.45;
+        }
+        .stars {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+        .star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+            animation: rise linear infinite;
+        }
+        .scene {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .panel {
+            position: relative;
+            width: min(680px, 100%);
+            padding: 44px 36px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 28px;
+            background: rgba(8, 15, 38, 0.58);
+            backdrop-filter: blur(22px);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+            text-align: center;
+            overflow: hidden;
+        }
+        .panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.16) 50%, transparent 80%);
+            transform: translateX(-130%);
+            animation: shine 3.6s ease-in-out infinite;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #cfe5ff;
+            font-size: 13px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #69f0ff;
+            box-shadow: 0 0 12px #69f0ff;
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+        h1 {
+            margin: 22px 0 14px;
+            font-size: clamp(34px, 8vw, 62px);
+            line-height: 1.06;
+            letter-spacing: 0.02em;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #ffffff 0%, #8bf5ff 35%, #a48cff 70%, #ff77c8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            background-size: 200% auto;
+            animation: flow 6s linear infinite;
+        }
+        .desc {
+            margin: 0 auto 28px;
+            max-width: 520px;
+            color: rgba(230, 238, 255, 0.8);
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        .progress-wrap {
+            display: grid;
+            gap: 12px;
+            justify-items: center;
+        }
+        .progress-text {
+            font-size: 14px;
+            color: rgba(214, 226, 255, 0.85);
+        }
+        .progress-bar {
+            width: min(420px, 100%);
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+        }
+        .progress-inner {
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #60efff, #7b6cff, #ff5cb8);
+            box-shadow: 0 0 20px rgba(123, 108, 255, 0.8);
+            animation: loading 4.8s linear forwards;
+        }
+        .actions {
+            margin-top: 24px;
+        }
+        button {
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 22px;
+            font-size: 14px;
+            color: #081122;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 34px rgba(255, 255, 255, 0.25);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes shine {
+            0%, 55% { transform: translateX(-130%); }
+            100% { transform: translateX(130%); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.35); opacity: 1; }
+        }
+        @keyframes flow {
+            to { background-position: 200% center; }
+        }
+        @keyframes loading {
+            to { width: 100%; }
+        }
+        @keyframes rise {
+            from {
+                transform: translateY(120vh) scale(0.8);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-20vh) scale(1.2);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="aurora"></div>
+    <div class="stars" id="stars"></div>
+    <main class="scene">
+        <section class="panel">
+            <div class="badge">
+                <span class="badge-dot"></span>
+                Future Chat Experience
+            </div>
+            <h1><span class="gradient-text">欢迎来到 AI 对话空间</span></h1>
+            <p class="desc">正在点亮界面、加载氛围与交互体验，几秒后将自动进入登录页，开启你的专属对话。</p>
+            <div class="progress-wrap">
+                <div id="progressText" class="progress-text">准备进入登录页...</div>
+                <div class="progress-bar">
+                    <div class="progress-inner"></div>
+                </div>
+            </div>
+            <div class="actions">
+                <button id="skipBtn" type="button">立即进入</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const USER_NAME_KEY = "dashscope_user_name";
+        const WELCOME_SEEN_KEY = "dashscope_welcome_seen";
+        const starsEl = document.getElementById("stars");
+        const skipBtn = document.getElementById("skipBtn");
+        const progressTextEl = document.getElementById("progressText");
+        const duration = 4800;
+
+        function goNext() {
+            sessionStorage.setItem(WELCOME_SEEN_KEY, "1");
+            window.location.href = "./login.html";
+        }
+
+        function createStars() {
+            for (let i = 0; i < 28; i += 1) {
+                const star = document.createElement("span");
+                star.className = "star";
+                star.style.left = Math.random() * 100 + "%";
+                star.style.animationDuration = 6 + Math.random() * 8 + "s";
+                star.style.animationDelay = -(Math.random() * 10) + "s";
+                star.style.opacity = String(0.3 + Math.random() * 0.7);
+                const size = 2 + Math.random() * 4;
+                star.style.width = size + "px";
+                star.style.height = size + "px";
+                starsEl.appendChild(star);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedName = localStorage.getItem(USER_NAME_KEY);
+            if (savedName) {
+                window.location.href = "./index.html";
+                return;
+            }
+
+            createStars();
+            const startTime = Date.now();
+            const timer = window.setInterval(() => {
+                const progress = Math.min(100, Math.round(((Date.now() - startTime) / duration) * 100));
+                progressTextEl.textContent = "欢迎动画加载中 " + progress + "%";
+                if (progress >= 100) {
+                    window.clearInterval(timer);
+                }
+            }, 120);
+
+            window.setTimeout(goNext, duration);
+        });
+
+        skipBtn.addEventListener("click", goNext);
+    </script>
+</body>
+</html>
