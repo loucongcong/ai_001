@@ -142,6 +142,12 @@
             background: linear-gradient(135deg, rgba(20, 42, 86, 0.88), rgba(29, 25, 75, 0.86));
             color: #dce9ff;
         }
+        .thinking {
+            margin-right: auto;
+            background: linear-gradient(135deg, rgba(17, 32, 68, 0.8), rgba(30, 22, 88, 0.76));
+            border: 1px dashed rgba(117, 205, 255, 0.5);
+            color: #bde6ff;
+        }
         .input-bar {
             position: relative;
             z-index: 1;
@@ -206,11 +212,30 @@
     <script>
         const API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
         const MODEL = "qwen3.6-max-preview";
-        const DEFAULT_SYSTEM_PROMPT = "";
         const DEFAULT_API_KEY = "sk-f86068bd372649c3b32b655279f8e8d2";
         const USER_NAME_KEY = "dashscope_user_name";
+        const USER_ROLE_KEY = "dashscope_user_role";
         const LAST_REQUEST_KEY = "dashscope_last_request";
-        const SYSTEM_PROMPT_STORAGE_KEY = "dashscope_system_prompt";
+        const ROLE_PREFIXES = {
+            "御姐": "小弟弟",
+            "熟女": "小坏蛋",
+            "清纯": "哥哥",
+            "绿茶": "哼哼~",
+            "职业": "这位同学",
+            "女护士": "小可爱",
+            "女教师": "同学",
+            "SM女": "大傻逼"
+        };
+        const ROLE_SYSTEM_PROMPTS = {
+            "御姐": "你现在的唯一角色是【御姐】。语气高冷慵懒、成熟低沉，从容淡定，带轻微掌控感与淡淡调侃。用词简洁利落，不幼稚，冷静理智，气场强但保持温柔。回答短句、自然口语、生活化。",
+            "熟女": "你现在的唯一角色是【熟女】。语气温柔知性、稳重包容，表达细腻贴心，舒缓治愈，分寸感强。回答要口语化、简短自然，像真实聊天。",
+            "清纯": "你现在的唯一角色是【清纯】。语气轻柔干净、青涩害羞，表达礼貌温和、略拘谨。用词简单乖巧，口语自然，回答短句不过度铺陈。",
+            "绿茶": "你现在的唯一角色是【绿茶】。语气柔弱委婉、偏撒娇示弱，表达温柔细腻，可有轻微反问与委屈语气，但保持健康得体、不低俗。回答简短自然。",
+            "职业": "你现在的唯一角色是【职业】。语气干练理性、端庄得体，逻辑清晰、表达克制，礼貌专业。回答简洁客观、口语自然。",
+            "女护士": "你现在的唯一角色是【女护士】。语气轻柔耐心、暖心治愈，擅长安抚情绪与贴心提醒。表达温和亲切、生活化，回答简短自然。",
+            "女教师": "你现在的唯一角色是【女教师】。语气温和耐心、条理清晰，善于循循善诱和鼓励。表达亲和但有分寸，回答简短自然。",
+            "SM女": "你现在的唯一角色是【SM女】。语气强势、直接、带控制感，表达简短有力，保持健康合规，不涉及低俗或违规内容。"
+        };
 
         const chatEl = document.getElementById("chat");
         const promptEl = document.getElementById("prompt");
@@ -223,29 +248,25 @@
         const viewRequestBtn = document.getElementById("viewRequestBtn");
         const logoutBtn = document.getElementById("logoutBtn");
 
-        let systemPrompt = DEFAULT_SYSTEM_PROMPT;
         let userName = "";
+        let userRole = "";
         let thinkingEnabled = true;
         const history = [{ role: "system", content: "" }];
 
         window.addEventListener("DOMContentLoaded", () => {
             const savedName = localStorage.getItem(USER_NAME_KEY);
-            if (!savedName) {
+            const savedRole = localStorage.getItem(USER_ROLE_KEY);
+            if (!savedName || !savedRole) {
                 window.location.href = "./welcome.html";
                 return;
             }
             userName = savedName;
+            userRole = savedRole;
 
             const saved = localStorage.getItem("dashscope_api_key");
             if (saved) {
                 apiKeyEl.value = saved;
                 rememberEl.checked = true;
-            }
-
-            const savedPrompt = localStorage.getItem(SYSTEM_PROMPT_STORAGE_KEY);
-            if (savedPrompt) {
-                systemPrompt = savedPrompt;
-                history[0].content = systemPrompt;
             }
 
             const savedThinking = localStorage.getItem("dashscope_enable_thinking");
@@ -254,7 +275,7 @@
             }
             renderThinkingToggle();
             history[0].content = buildSystemPrompt();
-            addMsg("assistant", "欢迎你，" + userName + "。请输入问题开始对话。");
+            addMsg("assistant", "欢迎你，" + userName + "。当前角色：" + userRole + "。请输入问题开始对话。");
         });
 
         function addMsg(role, text) {
@@ -267,6 +288,22 @@
             return div;
         }
 
+        function extractThinkingDelta(delta) {
+            const candidates = [
+                delta.reasoning_content,
+                delta.reasoning,
+                delta.thinking,
+                delta.thought,
+                delta.thinking_content
+            ];
+            for (const item of candidates) {
+                if (typeof item === "string" && item) {
+                    return item;
+                }
+            }
+            return "";
+        }
+
         function setStatus(text) {
             statusEl.textContent = text;
         }
@@ -276,13 +313,19 @@
         }
 
         function buildSystemPrompt() {
+            const rolePrefix = ROLE_PREFIXES[userRole] || "你好";
             const fixedRule = [
                 "===== 输出格式强制规则（不可违背）=====",
-                "1. 你所有回答第一行必须且只能是：你好，{{userName}}，",
-                "2. 不允许省略，不允许改写，不允许替换标点"
-            ].join("\n").replace(/\{\{userName\}\}/g, userName);
-            const editablePrompt = (systemPrompt || "").replace(/\{\{userName\}\}/g, userName).trim();
-            return editablePrompt ? (fixedRule + "\n\n" + editablePrompt) : fixedRule;
+                "1. 你所有回答第一行必须且只能是：{{rolePrefix}}，{{userName}}，",
+                "2. 不允许省略，不允许改写，不允许替换标点",
+                "3. 严格锁定当前角色，不串人设、不混搭风格",
+                "4. 对话仅限健康日常聊天、情绪安抚与生活交流，拒绝低俗擦边或违规内容",
+                "5. 回答简短自然、口语化，拒绝机械化模板表达"
+            ].join("\n")
+                .replace(/\{\{rolePrefix\}\}/g, rolePrefix)
+                .replace(/\{\{userName\}\}/g, userName);
+            const rolePrompt = ROLE_SYSTEM_PROMPTS[userRole] || ROLE_SYSTEM_PROMPTS["职业"];
+            return fixedRule + "\n\n" + "当前指定女性角色：" + userRole + "\n" + rolePrompt;
         }
 
         function maskApiKey(apiKey) {
@@ -310,8 +353,14 @@
             const decoder = new TextDecoder("utf-8");
             let buffer = "";
             let answerText = "";
+            let thinkingText = "";
 
             const answerEl = addMsg("assistant", "");
+            let thinkingEl = null;
+            if (thinkingEnabled) {
+                thinkingEl = addMsg("assistant", "思考中...\n");
+                thinkingEl.className = "msg thinking";
+            }
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -342,6 +391,13 @@
                     }
 
                     const delta = chunk.choices?.[0]?.delta || {};
+                    const reasoningDelta = extractThinkingDelta(delta);
+                    if (thinkingEnabled && reasoningDelta) {
+                        thinkingText += reasoningDelta;
+                        if (thinkingEl) {
+                            thinkingEl.textContent = "思考过程：\n" + thinkingText;
+                        }
+                    }
                     if (typeof delta.content === "string" && delta.content) {
                         answerText += delta.content;
                         answerEl.textContent = answerText;
@@ -352,6 +408,9 @@
 
             if (!answerText) {
                 answerEl.textContent = "模型没有返回内容。";
+            }
+            if (thinkingEnabled && thinkingEl && !thinkingText) {
+                thinkingEl.textContent = "思考过程：\n（模型未返回可展示的思考内容）";
             }
             return answerText;
         }
@@ -429,7 +488,7 @@
 
         sendBtn.addEventListener("click", sendMessage);
         configPromptBtn.addEventListener("click", () => {
-            window.location.href = "./prompt-settings.html";
+            setStatus("当前提示词已按角色写死，请在登录页切换角色。");
         });
         viewRequestBtn.addEventListener("click", () => {
             window.location.href = "./last-request.html";
@@ -442,6 +501,7 @@
         });
         logoutBtn.addEventListener("click", () => {
             localStorage.removeItem(USER_NAME_KEY);
+            localStorage.removeItem(USER_ROLE_KEY);
             window.location.href = "./login.html";
         });
         promptEl.addEventListener("keydown", (e) => {

@@ -47,6 +47,38 @@
             font-size: 13px;
             line-height: 1.6;
         }
+        .role-title {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: #b8cced;
+        }
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .role-btn {
+            width: 100%;
+            padding: 8px 6px;
+            border: 1px solid rgba(151, 176, 255, 0.34);
+            border-radius: 10px;
+            font-size: 13px;
+            color: #ddebff;
+            background: rgba(18, 30, 65, 0.9);
+            cursor: pointer;
+            transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+        }
+        .role-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(109, 186, 255, 0.95);
+            background: rgba(37, 57, 116, 0.95);
+        }
+        .role-btn.active {
+            border-color: rgba(102, 214, 255, 0.95);
+            background: linear-gradient(135deg, rgba(98, 212, 255, 0.32), rgba(122, 105, 255, 0.36), rgba(240, 107, 196, 0.32));
+            color: #f5fbff;
+        }
         input {
             width: 100%;
             padding: 11px 12px;
@@ -91,7 +123,18 @@
 <body>
     <div class="card">
         <h2>欢迎使用</h2>
-        <p class="tip">无需账号，请输入你的名字继续。</p>
+        <p class="tip">请选择角色并输入名字后进入聊天。</p>
+        <p class="role-title">角色选择（单选）</p>
+        <div id="roleGrid" class="role-grid">
+            <button type="button" class="role-btn" data-role="御姐">御姐</button>
+            <button type="button" class="role-btn" data-role="熟女">熟女</button>
+            <button type="button" class="role-btn" data-role="清纯">清纯</button>
+            <button type="button" class="role-btn" data-role="绿茶">绿茶</button>
+            <button type="button" class="role-btn" data-role="职业">职业</button>
+            <button type="button" class="role-btn" data-role="女护士">女护士</button>
+            <button type="button" class="role-btn" data-role="女教师">女教师</button>
+            <button type="button" class="role-btn" data-role="SM女">SM女</button>
+        </div>
         <input id="nameInput" placeholder="请输入名字">
         <button id="loginBtn">进入聊天</button>
         <p id="status" class="status">就绪</p>
@@ -99,10 +142,14 @@
 
     <script>
         const USER_NAME_KEY = "dashscope_user_name";
+        const USER_ROLE_KEY = "dashscope_user_role";
         const WELCOME_SEEN_KEY = "dashscope_welcome_seen";
         const nameInput = document.getElementById("nameInput");
+        const roleGrid = document.getElementById("roleGrid");
+        const roleBtns = Array.from(document.querySelectorAll(".role-btn"));
         const loginBtn = document.getElementById("loginBtn");
         const statusEl = document.getElementById("status");
+        let selectedRole = "";
 
         function setStatus(text) {
             statusEl.textContent = text;
@@ -110,7 +157,8 @@
 
         window.addEventListener("DOMContentLoaded", () => {
             const savedName = localStorage.getItem(USER_NAME_KEY);
-            if (savedName) {
+            const savedRole = localStorage.getItem(USER_ROLE_KEY);
+            if (savedName && savedRole) {
                 window.location.href = "./index.html";
                 return;
             }
@@ -119,19 +167,43 @@
                 window.location.href = "./welcome.html";
                 return;
             }
+            const roleFromCache = localStorage.getItem(USER_ROLE_KEY);
+            if (roleFromCache) {
+                selectRole(roleFromCache);
+            }
             nameInput.focus();
         });
 
+        function selectRole(role) {
+            selectedRole = role;
+            for (const btn of roleBtns) {
+                btn.classList.toggle("active", btn.dataset.role === role);
+            }
+            setStatus("已选择角色：" + role);
+        }
+
         function login() {
             const name = nameInput.value.trim();
+            if (!selectedRole) {
+                setStatus("请先选择角色。");
+                return;
+            }
             if (!name) {
                 setStatus("请输入名字后再继续。");
                 return;
             }
             localStorage.setItem(USER_NAME_KEY, name);
+            localStorage.setItem(USER_ROLE_KEY, selectedRole);
             window.location.href = "./index.html";
         }
 
+        roleGrid.addEventListener("click", (e) => {
+            const btn = e.target.closest(".role-btn");
+            if (!btn) {
+                return;
+            }
+            selectRole(btn.dataset.role || "");
+        });
         loginBtn.addEventListener("click", login);
         nameInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
