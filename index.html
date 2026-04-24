@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易 AI 对话</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f4f7;
+            color: #222;
+        }
+        .app {
+            max-width: 900px;
+            margin: 20px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+        .header {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .header h3 {
+            margin: 0 12px 0 0;
+            font-size: 16px;
+        }
+        .header input[type="password"] {
+            width: 340px;
+            max-width: 100%;
+            padding: 8px 10px;
+        }
+        .header label {
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .header button {
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #fafafa;
+        }
+        .msg {
+            max-width: 80%;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .user {
+            margin-left: auto;
+            background: #d8ecff;
+        }
+        .assistant {
+            margin-right: auto;
+            background: #ececec;
+        }
+        .input-bar {
+            border-top: 1px solid #e8e8e8;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+        }
+        .input-bar textarea {
+            flex: 1;
+            resize: none;
+            min-height: 48px;
+            max-height: 160px;
+            padding: 10px;
+            line-height: 1.4;
+        }
+        .input-bar button {
+            width: 100px;
+            cursor: pointer;
+        }
+        .status {
+            margin: 0 12px 12px;
+            color: #666;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h3>简易 AI 对话（Qwen）</h3>
+            <input id="apiKey" type="password" placeholder="输入 DASHSCOPE_API_KEY（如 sk-...）">
+            <label><input id="rememberKey" type="checkbox">记住 Key（本地浏览器）</label>
+            <button id="configPromptBtn">配置提示词</button>
+            <button id="viewRequestBtn">最近请求</button>
+            <button id="toggleThinkingBtn">思考：开</button>
+        </div>
+
+        <div id="chat" class="chat"></div>
+
+        <div class="input-bar">
+            <textarea id="prompt" placeholder="输入你的问题，按 Ctrl/Cmd + Enter 发送"></textarea>
+            <button id="sendBtn">发送</button>
+        </div>
+        <p id="status" class="status">就绪</p>
+    </div>
+
+    <script>
+        const API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+        const MODEL = "qwen3.6-max-preview";
+        const DEFAULT_SYSTEM_PROMPT = "";
+        const DEFAULT_API_KEY = "sk-f86068bd372649c3b32b655279f8e8d2";
+        const USER_NAME_KEY = "dashscope_user_name";
+        const LAST_REQUEST_KEY = "dashscope_last_request";
+        const SYSTEM_PROMPT_STORAGE_KEY = "dashscope_system_prompt";
+
+        const chatEl = document.getElementById("chat");
+        const promptEl = document.getElementById("prompt");
+        const apiKeyEl = document.getElementById("apiKey");
+        const rememberEl = document.getElementById("rememberKey");
+        const sendBtn = document.getElementById("sendBtn");
+        const statusEl = document.getElementById("status");
+        const configPromptBtn = document.getElementById("configPromptBtn");
+        const toggleThinkingBtn = document.getElementById("toggleThinkingBtn");
+        const viewRequestBtn = document.getElementById("viewRequestBtn");
+
+        let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+        let userName = "";
+        let thinkingEnabled = true;
+        const history = [{ role: "system", content: "" }];
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedName = localStorage.getItem(USER_NAME_KEY);
+            if (!savedName) {
+                window.location.href = "./login.html";
+                return;
+            }
+            userName = savedName;
+
+            const saved = localStorage.getItem("dashscope_api_key");
+            if (saved) {
+                apiKeyEl.value = saved;
+                rememberEl.checked = true;
+            }
+
+            const savedPrompt = localStorage.getItem(SYSTEM_PROMPT_STORAGE_KEY);
+            if (savedPrompt) {
+                systemPrompt = savedPrompt;
+                history[0].content = systemPrompt;
+            }
+
+            const savedThinking = localStorage.getItem("dashscope_enable_thinking");
+            if (savedThinking !== null) {
+                thinkingEnabled = savedThinking === "1";
+            }
+            renderThinkingToggle();
+            history[0].content = buildSystemPrompt();
+            addMsg("assistant", "欢迎你，" + userName + "。请输入问题开始对话。");
+        });
+
+        function addMsg(role, text) {
+            const div = document.createElement("div");
+            const roleClass = role === "user" ? "user" : "assistant";
+            div.className = "msg " + roleClass;
+            div.textContent = text;
+            chatEl.appendChild(div);
+            chatEl.scrollTop = chatEl.scrollHeight;
+            return div;
+        }
+
+        function setStatus(text) {
+            statusEl.textContent = text;
+        }
+
+        function renderThinkingToggle() {
+            toggleThinkingBtn.textContent = "思考：" + (thinkingEnabled ? "开" : "关");
+        }
+
+        function buildSystemPrompt() {
+            const fixedRule = [
+                "===== 输出格式强制规则（不可违背）=====",
+                "1. 你所有回答第一行必须且只能是：你好，{{userName}}，",
+                "2. 不允许省略，不允许改写，不允许替换标点"
+            ].join("\n").replace(/\{\{userName\}\}/g, userName);
+            const editablePrompt = (systemPrompt || "").replace(/\{\{userName\}\}/g, userName).trim();
+            return editablePrompt ? (fixedRule + "\n\n" + editablePrompt) : fixedRule;
+        }
+
+        function maskApiKey(apiKey) {
+            if (!apiKey || apiKey.length < 8) {
+                return "Bearer ****";
+            }
+            return "Bearer " + apiKey.slice(0, 6) + "..." + apiKey.slice(-4);
+        }
+
+        async function readErrorText(response) {
+            try {
+                const data = await response.json();
+                return data.message || data.error?.message || JSON.stringify(data);
+            } catch (_) {
+                try {
+                    return await response.text();
+                } catch (__){
+                    return "请求失败";
+                }
+            }
+        }
+
+        async function readStreamResult(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+            let answerText = "";
+
+            const answerEl = addMsg("assistant", "");
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed.startsWith("data:")) {
+                        continue;
+                    }
+
+                    const payload = trimmed.slice(5).trim();
+                    if (!payload || payload === "[DONE]") {
+                        continue;
+                    }
+
+                    let chunk;
+                    try {
+                        chunk = JSON.parse(payload);
+                    } catch (_) {
+                        continue;
+                    }
+
+                    const delta = chunk.choices?.[0]?.delta || {};
+                    if (typeof delta.content === "string" && delta.content) {
+                        answerText += delta.content;
+                        answerEl.textContent = answerText;
+                    }
+                }
+                chatEl.scrollTop = chatEl.scrollHeight;
+            }
+
+            if (!answerText) {
+                answerEl.textContent = "模型没有返回内容。";
+            }
+            return answerText;
+        }
+
+        async function sendMessage() {
+            const typedApiKey = apiKeyEl.value.trim();
+            const apiKey = typedApiKey || DEFAULT_API_KEY;
+            const userText = promptEl.value.trim();
+
+            if (!apiKey) {
+                setStatus("请先输入 DASHSCOPE_API_KEY，或在代码里配置默认 Key。");
+                return;
+            }
+            if (!userText) {
+                setStatus("请输入内容。");
+                return;
+            }
+
+            if (rememberEl.checked && typedApiKey) {
+                localStorage.setItem("dashscope_api_key", typedApiKey);
+            } else {
+                localStorage.removeItem("dashscope_api_key");
+            }
+
+            addMsg("user", userText);
+            history[0].content = buildSystemPrompt();
+            history.push({ role: "user", content: userText });
+            promptEl.value = "";
+            sendBtn.disabled = true;
+            setStatus("请求中...");
+
+            try {
+                const requestBody = {
+                    model: MODEL,
+                    messages: history,
+                    extra_body: {
+                        enable_thinking: thinkingEnabled
+                    },
+                    stream: true
+                };
+                localStorage.setItem(LAST_REQUEST_KEY, JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    url: API_URL,
+                    method: "POST",
+                    headers: {
+                        Authorization: maskApiKey(apiKey),
+                        "Content-Type": "application/json"
+                    },
+                    body: requestBody
+                }, null, 2));
+
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer " + apiKey,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!res.ok) {
+                    throw new Error(await readErrorText(res));
+                }
+
+                const reply = await readStreamResult(res);
+                history.push({ role: "assistant", content: reply });
+                setStatus("完成");
+            } catch (err) {
+                addMsg("assistant", "请求失败：" + err.message);
+                setStatus("请求失败");
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        sendBtn.addEventListener("click", sendMessage);
+        configPromptBtn.addEventListener("click", () => {
+            window.location.href = "./prompt-settings.html";
+        });
+        viewRequestBtn.addEventListener("click", () => {
+            window.location.href = "./last-request.html";
+        });
+        toggleThinkingBtn.addEventListener("click", () => {
+            thinkingEnabled = !thinkingEnabled;
+            localStorage.setItem("dashscope_enable_thinking", thinkingEnabled ? "1" : "0");
+            renderThinkingToggle();
+            setStatus("思考功能已" + (thinkingEnabled ? "开启" : "关闭") + "。");
+        });
+        promptEl.addEventListener("keydown", (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

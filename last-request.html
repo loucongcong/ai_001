@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最近请求</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f4f7;
+            color: #222;
+        }
+        .container {
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 0 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 16px;
+        }
+        h2 {
+            margin: 0 0 10px;
+        }
+        .tip {
+            margin: 0 0 12px;
+            color: #666;
+            font-size: 13px;
+        }
+        pre {
+            margin: 0;
+            background: #f6f8fa;
+            border-radius: 8px;
+            padding: 12px;
+            overflow: auto;
+            max-height: 65vh;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.45;
+        }
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 9px 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>最近一次 API 请求</h2>
+            <p class="tip">展示聊天页最近一次发送给大模型的请求快照（Authorization 已做脱敏）。</p>
+            <pre id="requestView">暂无请求记录。请先回到聊天页发送一次消息。</pre>
+            <div class="actions">
+                <button id="refreshBtn">刷新</button>
+                <button id="copyBtn">复制</button>
+                <button id="backBtn">返回聊天页</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LAST_REQUEST_KEY = "dashscope_last_request";
+        const requestView = document.getElementById("requestView");
+        const refreshBtn = document.getElementById("refreshBtn");
+        const copyBtn = document.getElementById("copyBtn");
+        const backBtn = document.getElementById("backBtn");
+
+        function loadLastRequest() {
+            const saved = localStorage.getItem(LAST_REQUEST_KEY);
+            if (!saved) {
+                requestView.textContent = "暂无请求记录。请先回到聊天页发送一次消息。";
+                return;
+            }
+            requestView.textContent = saved;
+        }
+
+        refreshBtn.addEventListener("click", loadLastRequest);
+        copyBtn.addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(requestView.textContent);
+                copyBtn.textContent = "已复制";
+                setTimeout(() => {
+                    copyBtn.textContent = "复制";
+                }, 1200);
+            } catch (_) {
+                copyBtn.textContent = "复制失败";
+                setTimeout(() => {
+                    copyBtn.textContent = "复制";
+                }, 1200);
+            }
+        });
+        backBtn.addEventListener("click", () => {
+            window.location.href = "./index.html";
+        });
+
+        loadLastRequest();
+    </script>
+</body>
+</html>

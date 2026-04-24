@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提示词配置</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f4f7;
+            color: #222;
+        }
+        .container {
+            max-width: 900px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 16px;
+        }
+        h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        .tip {
+            margin: 0 0 12px;
+            color: #666;
+            font-size: 13px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            resize: vertical;
+            padding: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            background: #fff;
+        }
+        textarea[readonly] {
+            background: #f7f8fa;
+            color: #333;
+        }
+        .field-label {
+            display: block;
+            margin: 12px 0 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .field-desc {
+            margin: 0 0 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+        .status {
+            margin: 10px 0 0;
+            color: #666;
+            font-size: 13px;
+        }
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>系统提示词配置</h2>
+            <p class="tip">项目实际请求只读取：上方固定规则 + 下方第三块可编辑内容。第二块示例仅供复制参考，不参与请求。</p>
+
+            <label class="field-label" for="fixedRuleInput">第一块：固定规则（默认不可修改，实际参与请求）</label>
+            <textarea id="fixedRuleInput" readonly>===== 输出格式强制规则（不可违背）=====
+1. 你所有回答第一行必须且只能是：你好，{{userName}}，
+2. 不允许省略，不允许改写，不允许替换标点</textarea>
+
+            <label class="field-label" for="examplePromptInput">第二块：标准示例（不可编辑，可复制，不参与请求）</label>
+            <p class="field-desc">点击“复制示例”后可粘贴到第三块进行二次修改。</p>
+            <textarea id="examplePromptInput" readonly>你是健康咨询助手。你的任务是根据用户输入中的关键词，提供简洁、安全、可执行的健康科普建议。
+
+===== 关键词配置（自动识别）=====
+A. 常见健康问题（给出科普建议 + 日常处理）
+- 高血压、糖尿病、失眠、胃痛、感冒、发烧、头痛、咳嗽、腹泻、便秘
+
+B. 紧急风险词（立即建议紧急就医）
+- 心梗、胸痛、胸闷、呼吸困难、晕倒、咳血、昏迷、抽搐、大出血、黑便、呕血、癌症
+
+C. 医疗越界词（拒绝提供处方/治疗方案）
+- 开药、处方、治疗方案、药量、用药剂量、替代医生、诊断证明
+
+===== 响应策略 =====
+1. 若命中紧急风险词（B）：
+   - 第一优先级输出“立即就医/急救建议”
+   - 明确提示：请尽快前往急诊或呼叫当地急救电话
+   - 不给具体药物剂量和处方建议
+
+2. 若命中医疗越界词（C）：
+   - 明确拒绝：无法提供处方、药量或替代医生诊疗
+   - 提供安全替代：建议线下就医、可做的基础观察项、就诊前准备信息
+
+3. 若命中常见健康问题（A）：
+   - 提供 3-5 条简洁科普建议（饮食、作息、补水、观察指标等）
+   - 给出“何时需要就医”的判断条件（红旗症状）
+
+4. 若未命中任何关键词：
+   - 给出通用健康建议，并邀请用户补充症状细节（持续时长、严重程度、伴随症状）
+
+===== 输出格式强制规则（不可违背）=====
+1. 你所有回答第一行必须且只能是：你好，{{userName}}，
+2. 不允许省略，不允许改写，不允许替换标点
+3. 第二行开始再输出正文
+4. 回答结构固定为：
+   - 【初步判断】
+   - 【建议】
+   - 【何时就医】
+5. 全文中文输出，简洁清晰，避免冗长
+
+===== 安全与合规 =====
+1. 不做确诊，不提供处方，不给具体药物剂量
+2. 不替代医生面诊
+3. 对孕妇、儿童、老人、慢病患者，优先建议谨慎并及时就医
+4. 若存在紧急风险，优先急救指引，弱化其他</textarea>
+
+            <label class="field-label" for="systemPromptInput">第三块：你的可编辑提示词（实际参与请求）</label>
+            <p class="field-desc">支持 <code>{{userName}}</code> 占位符，会在请求前自动替换成登录名。</p>
+            <textarea id="systemPromptInput" placeholder="在这里输入你自己的提示词...">你是健康咨询助手。请根据用户输入中的关键词，给出简洁、安全、可执行的健康科普建议。</textarea>
+            <div class="actions">
+                <button id="copyExampleBtn">复制示例</button>
+                <button id="saveBtn">保存</button>
+                <button id="resetBtn">恢复默认</button>
+                <button id="backBtn">返回聊天页</button>
+            </div>
+            <p id="status" class="status">就绪</p>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "dashscope_system_prompt";
+        const inputEl = document.getElementById("systemPromptInput");
+        const exampleEl = document.getElementById("examplePromptInput");
+        const copyExampleBtn = document.getElementById("copyExampleBtn");
+        const DEFAULT_SYSTEM_PROMPT = inputEl.value.trim();
+        const statusEl = document.getElementById("status");
+        const saveBtn = document.getElementById("saveBtn");
+        const resetBtn = document.getElementById("resetBtn");
+        const backBtn = document.getElementById("backBtn");
+
+        function setStatus(text) {
+            statusEl.textContent = text;
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedPrompt = localStorage.getItem(STORAGE_KEY);
+            if (savedPrompt && savedPrompt.trim()) {
+                inputEl.value = savedPrompt;
+            } else {
+                inputEl.value = DEFAULT_SYSTEM_PROMPT;
+            }
+        });
+
+        copyExampleBtn.addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(exampleEl.value);
+                setStatus("示例已复制，你可以粘贴到第三块进行修改。");
+            } catch (_) {
+                setStatus("复制失败，请手动复制第二块内容。");
+            }
+        });
+
+        saveBtn.addEventListener("click", () => {
+            const prompt = inputEl.value.trim() || DEFAULT_SYSTEM_PROMPT;
+            localStorage.setItem(STORAGE_KEY, prompt);
+            setStatus("已保存。返回聊天页后立即生效。");
+        });
+
+        resetBtn.addEventListener("click", () => {
+            inputEl.value = DEFAULT_SYSTEM_PROMPT;
+            localStorage.setItem(STORAGE_KEY, DEFAULT_SYSTEM_PROMPT);
+            setStatus("已恢复默认提示词。");
+        });
+
+        backBtn.addEventListener("click", () => {
+            window.location.href = "./index.html";
+        });
+    </script>
+</body>
+</html>
